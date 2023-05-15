@@ -487,27 +487,43 @@ STATIC mp_obj_t st7789_ST7789_blit_buffer(size_t n_args, const mp_obj_t *args) {
     mp_int_t y = mp_obj_get_int(args[3]);
     mp_int_t w = mp_obj_get_int(args[4]);
     mp_int_t h = mp_obj_get_int(args[5]);
+    mp_int_t scale = 1;
+    if (n_args > 6) {
+        if (mp_obj_is_float(args[6])) {
+            scale = (mp_int_t)mp_obj_float_get(args[6]);
+        }
+        if (mp_obj_is_int(args[6])) {
+            scale = mp_obj_get_int(args[6]);
+        }
+    }
 
-    set_window(self, x, y, x + w - 1, y + h - 1);
+
+    set_window(self, x, y, x + w*scale - 1, y + h*scale - 1);
     DC_HIGH();
     CS_LOW();
 
-    const int buf_size = 256;
-    int limit = MIN(buf_info.len, w * h * 2);
-    int chunks = limit / buf_size;
-    int rest = limit % buf_size;
-    int i = 0;
-    for (; i < chunks; i++) {
-        write_spi(self->spi_obj, (const uint8_t *)buf_info.buf + i * buf_size, buf_size);
-    }
-    if (rest) {
-        write_spi(self->spi_obj, (const uint8_t *)buf_info.buf + i * buf_size, rest);
+    uint8_t buf[w*scale*scale*2];
+
+    for (int i = 0; i < h; i++) {
+        if(scale > 1){
+            for(int j = 0; j < w; j++){
+                for(int s = 0; s < scale; s++){
+                    memcpy(buf + (j*scale + s)*2, buf_info.buf + (i*w + j)*2, 2);
+                }
+            }
+            for(int s = 1; s < scale; s++){
+                memcpy(buf + s*scale*w*2, buf, w*scale*2);
+            }
+            write_spi(self->spi_obj, (const uint8_t *)buf, w*scale*scale*2);
+        }else{
+            write_spi(self->spi_obj, (const uint8_t *)buf_info.buf + i * w, w);
+        }
     }
     CS_HIGH();
 
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(st7789_ST7789_blit_buffer_obj, 6, 6, st7789_ST7789_blit_buffer);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(st7789_ST7789_blit_buffer_obj, 6, 7, st7789_ST7789_blit_buffer);
 
 STATIC mp_obj_t st7789_ST7789_draw(size_t n_args, const mp_obj_t *args) {
     st7789_ST7789_obj_t *self = MP_OBJ_TO_PTR(args[0]);
