@@ -508,7 +508,7 @@ STATIC mp_obj_t st7789_ST7789_blit_buffer(size_t n_args, const mp_obj_t *args) {
         if(scale > 1){
             for(int j = 0; j < w; j++){
                 for(int s = 0; s < scale; s++){
-                    memcpy(buf + (j*scale + s)*2, buf_info.buf + (i*w + j)*2, 2);
+                    memcpy(buf + (j*scale + s)*2, (const uint8_t *)buf_info.buf + (i*w + j)*2, 2);
                 }
             }
             for(int s = 1; s < scale; s++){
@@ -524,6 +524,36 @@ STATIC mp_obj_t st7789_ST7789_blit_buffer(size_t n_args, const mp_obj_t *args) {
     return mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(st7789_ST7789_blit_buffer_obj, 6, 7, st7789_ST7789_blit_buffer);
+
+STATIC mp_obj_t st7789_ST7789_blit_img(size_t n_args, const mp_obj_t *args) {
+    st7789_ST7789_obj_t *self = MP_OBJ_TO_PTR(args[0]);
+    mp_buffer_info_t buf_info;
+    mp_get_buffer_raise(args[1], &buf_info, MP_BUFFER_READ);
+    mp_int_t x = mp_obj_get_int(args[2]);
+    mp_int_t y = mp_obj_get_int(args[3]);
+    mp_int_t w = mp_obj_get_int(args[4]);
+    mp_int_t h = mp_obj_get_int(args[5]);
+    mp_int_t chroma_color = -1;
+
+    if (n_args > 6) {
+        chroma_color = mp_obj_get_int(args[6]);
+    }
+
+
+    uint8_t *data = (uint8_t *)buf_info.buf;
+    for(uint32_t i = 0; i < w; i++){
+        for(uint32_t j = 0; j < h; j++){
+            uint16_t color = ((uint16_t)data[(j * w + i) * 2]) << 8 | ((uint16_t)data[(j * w + i) * 2 + 1]);
+            if(chroma_color == -1 || chroma_color != color){
+                draw_pixel(self, x+i, y+j, color);
+            }
+        }
+    }
+
+
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(st7789_ST7789_blit_img_obj, 6, 7, st7789_ST7789_blit_img);
 
 STATIC mp_obj_t st7789_ST7789_draw(size_t n_args, const mp_obj_t *args) {
     st7789_ST7789_obj_t *self = MP_OBJ_TO_PTR(args[0]);
@@ -2420,6 +2450,7 @@ STATIC const mp_rom_map_elem_t st7789_ST7789_locals_dict_table[] = {
     {MP_ROM_QSTR(MP_QSTR_pixel), MP_ROM_PTR(&st7789_ST7789_pixel_obj)},
     {MP_ROM_QSTR(MP_QSTR_line), MP_ROM_PTR(&st7789_ST7789_line_obj)},
     {MP_ROM_QSTR(MP_QSTR_blit_buffer), MP_ROM_PTR(&st7789_ST7789_blit_buffer_obj)},
+    {MP_ROM_QSTR(MP_QSTR_blit_img), MP_ROM_PTR(&st7789_ST7789_blit_img_obj)},
     {MP_ROM_QSTR(MP_QSTR_draw), MP_ROM_PTR(&st7789_ST7789_draw_obj)},
     {MP_ROM_QSTR(MP_QSTR_draw_len), MP_ROM_PTR(&st7789_ST7789_draw_len_obj)},
     {MP_ROM_QSTR(MP_QSTR_bitmap), MP_ROM_PTR(&st7789_ST7789_bitmap_obj)},
