@@ -516,7 +516,7 @@ STATIC mp_obj_t st7789_ST7789_blit_buffer(size_t n_args, const mp_obj_t *args) {
             }
             write_spi(self->spi_obj, (const uint8_t *)buf, w*scale*scale*2);
         }else{
-            write_spi(self->spi_obj, (const uint8_t *)buf_info.buf + i * w, w);
+            write_spi(self->spi_obj, (const uint8_t *)buf_info.buf + i * w * 2, w * 2);
         }
     }
     CS_HIGH();
